@@ -5,17 +5,14 @@ import json
 from datetime import datetime
 from dotenv import load_dotenv
 
-# Load environment variables from ~/.env
+# Load environment variables from ~/.env if it exists (for local testing)
 env_path = os.path.expanduser('~/.env')
-if not os.path.exists(env_path):
-    print(f"Error: .env file not found at {env_path}")
-    exit(1)
-
-load_dotenv(env_path, override=True)
+if os.path.exists(env_path):
+    load_dotenv(env_path, override=True)
 
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 if not GITHUB_TOKEN:
-    print("Error: GITHUB_TOKEN is missing in ~/.env")
+    print("Error: GITHUB_TOKEN is missing. Please provide it via environment variable.")
     exit(1)
 
 HEADERS = {
