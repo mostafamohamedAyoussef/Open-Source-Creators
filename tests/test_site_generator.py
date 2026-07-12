@@ -88,6 +88,49 @@ class SiteGeneratorTests(unittest.TestCase):
 
         self.assertEqual([candidate["id"] for candidate in related], [3, 2])
 
+    def test_related_projects_weight_shared_commercial_alternatives_above_language(self):
+        project = {
+            "id": 1,
+            "commercial_alternatives": ["Adobe Audition"],
+            "language": "Python",
+        }
+        candidates = [
+            project,
+            {
+                "id": 2,
+                "commercial_alternatives": [],
+                "language": "Python",
+                "score": 9,
+                "stargazers_count": 1000,
+            },
+            {
+                "id": 3,
+                "commercial_alternatives": ["Adobe Audition"],
+                "language": "JavaScript",
+                "score": 1,
+                "stargazers_count": 1,
+            },
+        ]
+
+        related = rank_related_projects(project, candidates)
+
+        self.assertEqual([candidate["id"] for candidate in related], [3, 2])
+
+    def test_related_projects_respects_default_and_explicit_limits(self):
+        project = {"id": 1, "categories": ["Audio"]}
+        candidates = [project] + [
+            {"id": candidate_id, "categories": ["Audio"], "score": 10 - candidate_id}
+            for candidate_id in range(2, 10)
+        ]
+
+        default_related = rank_related_projects(project, candidates)
+        limited_related = rank_related_projects(project, candidates, limit=2)
+
+        self.assertEqual(
+            [candidate["id"] for candidate in default_related], [2, 3, 4, 5, 6, 7]
+        )
+        self.assertEqual([candidate["id"] for candidate in limited_related], [2, 3])
+
 
 if __name__ == "__main__":
     unittest.main()
