@@ -34,7 +34,7 @@ def rank_related_projects(
         shared_alternatives = len(
             project_alternatives & set(candidate.get("commercial_alternatives", []))
         )
-        same_language = candidate.get("language") == project_language
+        same_language = bool(project_language) and candidate.get("language") == project_language
         return (
             3 * shared_categories
             + 2 * shared_tags
@@ -46,7 +46,11 @@ def rank_related_projects(
         candidate for candidate in candidates if candidate.get("id") != project.get("id")
     ]
     related.sort(
-        key=lambda candidate: (relevance(candidate), candidate.get("stargazers_count", 0)),
+        key=lambda candidate: (
+            relevance(candidate),
+            candidate.get("score", 0),
+            candidate.get("stargazers_count", 0),
+        ),
         reverse=True,
     )
     return related[:limit]

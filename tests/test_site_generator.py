@@ -54,6 +54,40 @@ class SiteGeneratorTests(unittest.TestCase):
 
         self.assertEqual([candidate["id"] for candidate in related], [3, 2])
 
+    def test_related_projects_break_relevance_ties_by_existing_score(self):
+        project = {"id": 1, "categories": ["Audio"], "language": "Python"}
+        candidates = [
+            project,
+            {
+                "id": 2,
+                "categories": ["Audio"],
+                "score": 1,
+                "stargazers_count": 1000,
+            },
+            {
+                "id": 3,
+                "categories": ["Audio"],
+                "score": 9,
+                "stargazers_count": 1,
+            },
+        ]
+
+        related = rank_related_projects(project, candidates)
+
+        self.assertEqual([candidate["id"] for candidate in related], [3, 2])
+
+    def test_related_projects_do_not_match_missing_languages(self):
+        project = {"id": 1}
+        candidates = [
+            project,
+            {"id": 2, "score": 1, "stargazers_count": 1},
+            {"id": 3, "language": "Python", "score": 9, "stargazers_count": 1},
+        ]
+
+        related = rank_related_projects(project, candidates)
+
+        self.assertEqual([candidate["id"] for candidate in related], [3, 2])
+
 
 if __name__ == "__main__":
     unittest.main()
