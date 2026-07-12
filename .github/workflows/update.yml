@@ -38,7 +38,7 @@ jobs:
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
-        git add data/processed_repos.json scripts/raw_repos.json
+        git add data/processed_repos.json data/raw_repos.json
         # Only commit if there are changes
         git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update database [skip ci]" && git push)
 
