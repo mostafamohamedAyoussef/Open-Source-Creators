@@ -14,9 +14,17 @@ It was built to track open-source alternatives to commercial giants like Midjour
 ## Architecture
 
 * `scripts/collector.py`: Fetches raw data from the GitHub API using your Personal Access Token.
-* `scripts/processor.py`: Filters, categorizes, maps commercial alternatives, and calculates scores.
+* `scripts/processor.py`: Filters, categorizes, maps commercial alternatives, calculates scores, and triggers static-site generation.
+* `scripts/site_generator.py`: Generates a canonical `/project/<slug>/` page for every repository, per-project JSON, a sitemap, and catalog metadata. Includes deterministic, explainable related-project ranking.
 * `data/processed_repos.json`: The compiled database used by the frontend.
-* `index.html` & `app.js`: The frontend interface.
+* `index.html` & `app.js`: The frontend interface. Cards link to per-project pages.
+* `tests/`: Unit tests (`python -m unittest discover`).
+
+Generated output (`project/`, `data/projects/`, `sitemap.xml`, `data/catalog-meta.json`) is rebuilt on every run and is git-ignored; the GitHub Action regenerates and deploys it.
+
+### Configuration
+
+* `SITE_URL` (optional): Public site URL used for canonical links and the sitemap. When unset, pages still render with relative links and absolute canonical/sitemap locations are omitted. Set it as a GitHub Actions **repository variable** for deployment.
 
 ## Local Setup
 
@@ -49,9 +57,9 @@ If you want to run or test the directory locally:
 ## Deploying to GitHub Pages
 
 1. Push this code to a public repository on your GitHub account.
-2. Navigate to your repository's **Settings > Secrets and variables > Actions**.
-3. Create a new repository secret named `GITHUB_TOKEN` and paste your GitHub Personal Access Token.
-4. Navigate to **Settings > Pages** and ensure it is enabled (the GitHub Action will handle the deployment automatically).
+2. The workflow uses the built-in `GITHUB_TOKEN` that Actions provides automatically — you do **not** need to create a secret for it. (The built-in token has a lower search-API rate limit; if the collector hits limits, add a personal access token as a secret named e.g. `GH_PAT` and reference it in the workflow instead.)
+3. (Optional) Under **Settings > Secrets and variables > Actions > Variables**, add a `SITE_URL` variable set to your Pages URL (e.g. `https://<user>.github.io/<repo>`) so canonical links and the sitemap use absolute URLs.
+4. Navigate to **Settings > Pages**, set the source to **GitHub Actions**, and the workflow will build and deploy automatically.
 
 ## Contributing
 

@@ -23,3 +23,18 @@ Thumbs.db
 
 # Local Git worktrees
 .worktrees/
+
+# Generated site output (rebuilt on deploy)
+project/
+data/projects/
+data/catalog-meta.json
+sitemap.xml
+
+# Raw collector output (rebuilt from API)
+data/raw_repos.json
+
+# Superpowers
+.superpowers/
+
+# Local editor/harness config
+.claude/
