@@ -3,26 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Open-Source Content Creation Directory</title>
+    <title>Open-Source Content Creation Directory — Find Open-Source Creator Tools</title>
+    <meta name="description" content="The continuously updated directory of open-source tools for content creators, replacing commercial giants like Midjourney, Runway, Canva, and more.">
+    <meta property="og:title" content="Open-Source Content Creation Directory">
+    <meta property="og:description" content="Search and discover open-source alternatives to commercial creative tools. Updated daily.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header class="header">
+    <header class="header" role="banner">
         <div class="container">
             <h1>Open-Source Content Creation Directory</h1>
             <p>The continuously updated database of open-source tools for creators, replacing commercial giants.</p>
-            
+
             <div class="search-bar">
-                <input type="text" id="searchInput" placeholder="Search by name, description, or commercial alternative (e.g. Runway, CapCut)...">
+                <label for="searchInput" class="sr-only">Search tools</label>
+                <input type="search" id="searchInput" placeholder="Search by name, description, or commercial alternative (e.g. Runway, CapCut)..." autocomplete="off">
             </div>
-            
-            <div class="filters" id="categoryFilters">
+
+            <nav class="filters" id="categoryFilters" aria-label="Category filters">
                 <!-- Category buttons injected via JS -->
-            </div>
-            
+            </nav>
+
             <div class="sort-controls">
-                <label>Sort by:</label>
+                <label for="sortSelect">Sort by:</label>
                 <select id="sortSelect">
                     <option value="score">Overall Score</option>
                     <option value="stars">GitHub Stars</option>
@@ -32,17 +38,17 @@
         </div>
     </header>
 
-    <main class="container">
-        <div id="loading" class="loading">Loading database...</div>
-        <div id="resultsInfo" class="results-info"></div>
-        <div class="grid" id="toolsGrid">
+    <main class="container" role="main">
+        <div id="loading" class="loading" aria-live="polite">Loading database...</div>
+        <div id="resultsInfo" class="results-info" aria-live="polite"></div>
+        <div class="grid" id="toolsGrid" role="list">
             <!-- Cards injected via JS -->
         </div>
     </main>
 
-    <footer>
+    <footer role="contentinfo">
         <div class="container">
-            <p>Updated daily via GitHub Actions • Built with open-source tools</p>
+            <p>Updated daily via GitHub Actions &bull; Built with open-source tools &bull; <a href="https://github.com/mostafamohamedAyoussef/Open-Source-Creators" target="_blank" rel="noreferrer">Source on GitHub</a></p>
         </div>
     </footer>
 
