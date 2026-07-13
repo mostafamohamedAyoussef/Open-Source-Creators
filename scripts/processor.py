@@ -2,6 +2,7 @@ import json
 import os
 import math
 from datetime import datetime, timezone
+from pathlib import Path
 
 # Commercial mapping dictionary
 COMMERCIAL_MAPPING = {
@@ -60,53 +61,56 @@ def map_commercial_alternative(repo):
             
     return alternatives
 
-def process_repos():
-    data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
-    raw_path = os.path.join(data_dir, "raw_repos.json")
-    if not os.path.exists(raw_path):
+def process_repos(root_dir=None):
+    root = Path(root_dir) if root_dir else Path(__file__).resolve().parent.parent
+    data_dir = root / "data"
+    raw_path = data_dir / "raw_repos.json"
+    if not raw_path.exists():
         print("raw_repos.json not found")
         return
-        
+
     with open(raw_path, 'r', encoding='utf-8') as f:
         repos = json.load(f)
-        
+
     processed = []
     for repo in repos:
         repo['score'] = calculate_score(repo)
         repo['commercial_alternatives'] = map_commercial_alternative(repo)
-        
-        # Tags processing
+
         all_tags = set(repo.get("topics", []))
         all_tags.update([cat.lower() for cat in repo.get("categories", [])])
         repo['tags'] = list(all_tags)
-        
-        # Derived fields
+
         now = datetime.now(timezone.utc)
         created = datetime.fromisoformat(repo.get("created_at").replace('Z', '+00:00'))
         age_days = (now - created).days
-        
+
         repo['is_hidden_gem'] = (
-            repo.get('stargazers_count', 0) < 5000 and 
+            repo.get('stargazers_count', 0) < 5000 and
             repo['score'] >= 7.5
         )
-        
+
         repo['is_emerging'] = (
-            age_days <= 730 and # 24 months
+            age_days <= 730 and
             repo['stargazers_count'] > 1000 and
             repo['score'] >= 8.0
         )
-        
+
         processed.append(repo)
-        
-    # Sort by score then stars
+
     processed.sort(key=lambda x: (x['score'], x['stargazers_count']), reverse=True)
-    
-    out_path = os.path.join(data_dir, "processed_repos.json")
+
+    out_path = data_dir / "processed_repos.json"
     with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(processed, f, indent=2, ensure_ascii=False)
-        
+
     print(f"Processed {len(processed)} repositories.")
     print(f"Saved to {out_path}")
+
+    from scripts.site_generator import build_site
+    site_url = os.getenv("SITE_URL")
+    metadata = build_site(processed, root, site_url)
+    print(f"Generated {metadata['total_projects']} project pages.")
 
 if __name__ == "__main__":
     process_repos()

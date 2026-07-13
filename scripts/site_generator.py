@@ -6,6 +6,34 @@ from html import escape as html_escape
 from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
 
+# Self-contained stylesheet so each project page renders correctly without an
+# extra network request or a relative path back to the site root.
+PAGE_STYLE = """
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6; margin: 0; padding: 2rem 1rem;
+    background: #0f172a; color: #e2e8f0;
+  }
+  main { max-width: 760px; margin: 0 auto; }
+  nav[aria-label="Breadcrumb"] { margin-bottom: 1.5rem; font-size: 0.9rem; }
+  a { color: #60a5fa; }
+  h1 { font-size: 2rem; margin: 0 0 0.5rem; color: #f8fafc; }
+  h2 { font-size: 1.15rem; margin: 2rem 0 0.75rem; color: #f8fafc;
+       border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.4rem; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.4rem 1.5rem; margin: 0; }
+  dt { color: #94a3b8; } dd { margin: 0; }
+  ul { padding-left: 1.2rem; } li { margin: 0.2rem 0; }
+  section ul.tags, section ul.categories, section ul.alternatives {
+    list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem;
+  }
+  section ul.tags li, section ul.categories li, section ul.alternatives li {
+    background: rgba(59,130,246,0.15); color: #93c5fd;
+    padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.85rem;
+  }
+"""
+
 
 def make_project_slug(repo: dict) -> str:
     raw = str(repo.get("full_name") or repo.get("name") or "project").lower()
@@ -148,6 +176,7 @@ def _render_project_page(record: dict, site_url: str | None) -> str:
     ) or "<li>None yet.</li>"
     escaped_name = html_escape(str(name))
     escaped_description = html_escape(str(description))
+    json_ld = _render_json_ld(record, site_url)
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -157,7 +186,11 @@ def _render_project_page(record: dict, site_url: str | None) -> str:
   <meta name="description" content="{html_escape(str(description), quote=True)}">
   <meta property="og:title" content="{html_escape(str(name), quote=True)}">
   <meta property="og:description" content="{html_escape(str(description), quote=True)}">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
   {canonical}
+  <style>{PAGE_STYLE}</style>
+  {json_ld}
 </head>
 <body>
   <main>
@@ -177,6 +210,30 @@ def _render_project_page(record: dict, site_url: str | None) -> str:
 </body>
 </html>
 """
+
+
+def _render_json_ld(record: dict, site_url: str | None) -> str:
+    """Emit SoftwareApplication structured data for richer search results."""
+    data = {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": record.get("name") or record.get("full_name") or "Project",
+        "applicationCategory": "MultimediaApplication",
+    }
+    if record.get("description"):
+        data["description"] = record["description"]
+    if record.get("html_url"):
+        data["codeRepository"] = record["html_url"]
+    if record.get("license"):
+        data["license"] = record["license"]
+    if record.get("language"):
+        data["programmingLanguage"] = record["language"]
+    if site_url:
+        data["url"] = site_url + "/" + record["project"]["path"]
+    # json.dumps escapes quotes; wrap in a script tag. "</" is neutralized so the
+    # payload cannot break out of the script element.
+    payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+    return f'<script type="application/ld+json">{payload}</script>'
 
 
 def _render_list(values: list, css_class: str) -> str:

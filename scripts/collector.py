@@ -5,10 +5,8 @@ import json
 from datetime import datetime
 from dotenv import load_dotenv
 
-# Load environment variables from ~/.env if it exists (for local testing)
-env_path = os.path.expanduser('~/.env')
-if os.path.exists(env_path):
-    load_dotenv(env_path, override=True)
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
+load_dotenv(os.path.expanduser('~/.env'))
 
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 if not GITHUB_TOKEN:
@@ -121,6 +119,7 @@ def main():
                 repo_id = item['id']
                 if repo_id not in collected_repos:
                     collected_repos[repo_id] = {
+                        "id": repo_id,
                         "name": item['name'],
                         "full_name": item['full_name'],
                         "html_url": item['html_url'],

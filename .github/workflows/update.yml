@@ -2,65 +2,69 @@ name: Daily Database Update
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Runs daily at midnight UTC
-  workflow_dispatch: # Allows manual trigger
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+# Allow the workflow to commit refreshed data and deploy to Pages.
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+# Avoid overlapping scheduled runs.
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
-  update-database:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
         cache: 'pip'
-        
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        
+
+    - name: Run tests
+      run: PYTHONPATH=. python -m unittest discover -v
+
     - name: Run Data Collector
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Automatically provided by GitHub Actions
-      run: |
-        python scripts/collector.py
-        
-    - name: Run Data Processor
-      run: |
-        python scripts/processor.py
-        
-    - name: Commit and push changes
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: python scripts/collector.py
+
+    - name: Run Data Processor and Site Generator
+      env:
+        SITE_URL: ${{ vars.SITE_URL }}
+      run: python scripts/processor.py
+
+    - name: Commit refreshed data
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
-        git add data/processed_repos.json data/raw_repos.json
-        # Only commit if there are changes
+        git add data/processed_repos.json
         git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update database [skip ci]" && git push)
 
-  deploy-pages:
-    needs: update-database
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-      
-    steps:
-    - name: Checkout latest code
-      uses: actions/checkout@v4
-      
     - name: Setup Pages
       uses: actions/configure-pages@v4
-      
+
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
+        # Uploads the full working tree, including freshly generated project pages
+        # and sitemap that are not committed to git.
         path: '.'
-        
+
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v4
