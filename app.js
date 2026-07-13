@@ -85,9 +85,9 @@ function filterAndSort() {
     render();
 }
 
-function projectCard(repo) {
+function projectCard(repo, rank) {
     const alts = (repo.commercial_alternatives || []).map(alt =>
-        `<span class="alt-tag">Replaces: ${escapeHtml(alt)}</span>`
+        `<span class="alt-tag">Replaces ${escapeHtml(alt)}</span>`
     ).join('');
 
     const tags = (repo.tags || []).slice(0, 4).map(tag =>
@@ -104,13 +104,15 @@ function projectCard(repo) {
         ? `<a href="${escapeHtml(projectPath)}" class="card-title">${escapeHtml(repo.name)}</a>`
         : `<a href="${escapeHtml(repo.html_url)}" target="_blank" rel="noreferrer" class="card-title">${escapeHtml(repo.name)}</a>`;
 
+    const rankLabel = typeof rank === 'number'
+        ? `${String(rank).padStart(2, '0')} &middot; Score ${repo.score}/10`
+        : `Score ${repo.score}/10`;
+
     return `
-        <div class="card">
+        <div class="card" role="listitem">
+            <div class="rank">${rankLabel}</div>
             <div class="card-header">
                 ${titleTag}
-                <div class="card-stats">
-                    <a href="${escapeHtml(repo.html_url)}" target="_blank" rel="noreferrer" title="View on GitHub">★ ${stars}</a>
-                </div>
             </div>
             <div class="card-desc">${escapeHtml(repo.description || 'No description provided.')}</div>
             <div class="card-meta">
@@ -118,8 +120,8 @@ function projectCard(repo) {
                 ${tags}
             </div>
             <div class="card-footer">
-                <span>Score: ${repo.score}/10</span>
-                <span>Updated: ${date}</span>
+                <a class="star-link" href="${escapeHtml(repo.html_url)}" target="_blank" rel="noreferrer" title="View on GitHub">★ ${stars}</a>
+                <span>Updated ${date}</span>
             </div>
         </div>
     `;
@@ -130,16 +132,16 @@ function render() {
     DOM.resultsInfo.textContent = `Showing ${filteredRepos.length} tools`;
 
     if (filteredRepos.length === 0) {
-        DOM.grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); padding: 3rem;">No tools found matching your search.</div>';
+        DOM.grid.innerHTML = '<div class="empty-state">No tools found matching your search.</div>';
         return;
     }
 
     const renderList = filteredRepos.slice(0, 200);
 
-    DOM.grid.innerHTML = renderList.map(repo => projectCard(repo)).join('');
+    DOM.grid.innerHTML = renderList.map((repo, i) => projectCard(repo, i + 1)).join('');
 
     if (filteredRepos.length > 200) {
-         DOM.grid.innerHTML += `<div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); padding: 1rem;">And ${filteredRepos.length - 200} more... (Refine search to see them)</div>`;
+         DOM.grid.innerHTML += `<div class="overflow-note">And ${filteredRepos.length - 200} more&hellip; (refine search to see them)</div>`;
     }
 }
 

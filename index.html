@@ -10,17 +10,20 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
     <header class="header" role="banner">
         <div class="container">
-            <h1>Open-Source Content Creation Directory</h1>
-            <p>The continuously updated database of open-source tools for creators, replacing commercial giants.</p>
+            <span class="kicker">Updated daily &middot; open-source only</span>
+            <h1>Find the open-source tool that <span class="accent">replaces</span> the one you pay for.</h1>
+            <p class="tagline">The continuously updated directory of open-source tools for creators, replacing commercial giants like Midjourney, Runway, Canva, and ElevenLabs.</p>
 
             <div class="search-bar">
                 <label for="searchInput" class="sr-only">Search tools</label>
-                <input type="search" id="searchInput" placeholder="Search by name, description, or commercial alternative (e.g. Runway, CapCut)..." autocomplete="off">
+                <div class="search-row">
+                    <input type="search" id="searchInput" placeholder="Search by name, description, or commercial alternative (e.g. Runway, CapCut)..." autocomplete="off">
+                </div>
             </div>
 
             <nav class="filters" id="categoryFilters" aria-label="Category filters">
@@ -28,7 +31,7 @@
             </nav>
 
             <div class="sort-controls">
-                <label for="sortSelect">Sort by:</label>
+                <label for="sortSelect">Sort by</label>
                 <select id="sortSelect">
                     <option value="score">Overall Score</option>
                     <option value="stars">GitHub Stars</option>

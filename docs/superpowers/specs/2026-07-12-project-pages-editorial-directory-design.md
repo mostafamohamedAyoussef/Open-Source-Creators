@@ -15,7 +15,11 @@ Historical analytics, semantic search, generated prose, screenshots, account fea
 
 ## Experience Direction
 
-The visual language is **editorial intelligence**: a warm-paper canvas, near-ink text, cobalt functional accents, and restrained amber status signals. A distinctive display serif for headings pairs with a workhorse sans for data. It should establish credibility through hierarchy, spacing, typography, and transparent data signals rather than decorative effects, glassmorphism, gradients, or unverified claims.
+> **Updated 2026-07-13:** superseded by a black/white/yellow editorial direction (below). The warm-paper/cobalt palette described in the original paragraph was never shipped; the design system that follows is the one implemented in `styles.css` and `scripts/site_generator.py`'s `PAGE_STYLE`.
+
+The visual language is **hard-edged editorial**: a near-black canvas (`#0a0a0a`), off-white text (`#f5f5f0`), and a single functional accent — yellow (`#ffd400`) — used only for the hero's emphasized word, active/hover states, star ratings, and "replaces X" alternative tags. No gradients, no glassmorphism, no drop shadows. Structure comes from 1px hairline rules (`#262626` on dark, `#f5f5f0` for stronger borders) rather than color or elevation. Bold condensed/grotesk sans (Inter, weights 700–900) is used throughout — no serif. It should establish credibility through hierarchy, spacing, and transparent data signals, the same way a printed spec sheet or Swiss-modernist poster does.
+
+Tool cards and project facts render as a **ruled grid**: cells share a 1px divider (achieved via `background` on the grid container + `gap: 1px`) instead of floating as individually-bordered cards, so a page of many items reads as one continuous table rather than a stack of boxes.
 
 ### Homepage
 

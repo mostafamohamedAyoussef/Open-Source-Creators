@@ -7,31 +7,52 @@ from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
 
 # Self-contained stylesheet so each project page renders correctly without an
-# extra network request or a relative path back to the site root.
+# extra network request or a relative path back to the site root. Design system
+# matches the homepage: black canvas, hard rules, yellow as the sole accent.
 PAGE_STYLE = """
-  :root { color-scheme: light dark; }
+  :root { color-scheme: dark; }
   * { box-sizing: border-box; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    line-height: 1.6; margin: 0; padding: 2rem 1rem;
-    background: #0f172a; color: #e2e8f0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6; margin: 0; padding: 0 1rem 4rem;
+    background: #0a0a0a; color: #f5f5f0;
   }
-  main { max-width: 760px; margin: 0 auto; }
-  nav[aria-label="Breadcrumb"] { margin-bottom: 1.5rem; font-size: 0.9rem; }
-  a { color: #60a5fa; }
-  h1 { font-size: 2rem; margin: 0 0 0.5rem; color: #f8fafc; }
-  h2 { font-size: 1.15rem; margin: 2rem 0 0.75rem; color: #f8fafc;
-       border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.4rem; }
-  dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.4rem 1.5rem; margin: 0; }
-  dt { color: #94a3b8; } dd { margin: 0; }
-  ul { padding-left: 1.2rem; } li { margin: 0.2rem 0; }
-  section ul.tags, section ul.categories, section ul.alternatives {
+  main { max-width: 720px; margin: 0 auto; }
+  nav[aria-label="Breadcrumb"] {
+    margin: 2rem 0 1.5rem; font-size: 0.8rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  a { color: #ffd400; }
+  h1 { font-size: clamp(2rem, 5vw, 2.6rem); font-weight: 900; letter-spacing: -0.02em; margin: 0 0 0.5rem; color: #f5f5f0; }
+  p.lead { font-size: 1.05rem; color: #999; margin-bottom: 1rem; }
+  h2 {
+    font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+    color: #ffd400; margin: 2.5rem 0 1rem;
+  }
+  .factgrid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1px; background: #262626; border: 1px solid #262626; margin: 0;
+  }
+  .factgrid .fact { background: #0a0a0a; padding: 1rem; display: flex; flex-direction: column; gap: 0.2rem; }
+  .factgrid .k {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: #666; font-weight: 700;
+  }
+  .factgrid .v { font-size: 1rem; font-weight: 700; color: #f5f5f0; word-break: break-word; }
+  ul { padding-left: 1.2rem; } li { margin: 0.3rem 0; }
+  section ul.tags, section ul.categories, section ul.alternatives, ul.related {
     list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem;
   }
-  section ul.tags li, section ul.categories li, section ul.alternatives li {
-    background: rgba(59,130,246,0.15); color: #93c5fd;
-    padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.85rem;
+  section ul.tags li, section ul.categories li {
+    border: 1px solid #f5f5f0; color: #999; padding: 0.25rem 0.6rem; font-size: 0.8rem; font-weight: 600;
   }
+  section ul.alternatives li {
+    background: #ffd400; color: #0a0a0a; padding: 0.25rem 0.6rem; font-size: 0.8rem; font-weight: 800;
+  }
+  ul.related { flex-direction: column; gap: 0; border-top: 1px solid #262626; }
+  ul.related li { margin: 0; border-bottom: 1px solid #262626; }
+  ul.related li a { display: block; padding: 0.75rem 0; text-decoration: none; color: #f5f5f0; font-weight: 700; }
+  ul.related li a:hover { color: #ffd400; }
+  p.refresh { margin-top: 3rem; font-size: 0.8rem; color: #666; border-top: 1px solid #262626; padding-top: 1rem; }
 """
 
 
@@ -163,7 +184,8 @@ def _render_project_page(record: dict, site_url: str | None) -> str:
         ("Repository", source_url),
     )
     fact_markup = "".join(
-        f"<dt>{label}</dt><dd>{html_escape(str(value)) if value is not None else '—'}</dd>"
+        f'<div class="fact"><span class="k">{label}</span>'
+        f"<span class=\"v\">{html_escape(str(value)) if value is not None else '—'}</span></div>"
         for label, value in facts
     )
     tags = _render_list(record.get("tags") or [], "tags")
@@ -194,17 +216,17 @@ def _render_project_page(record: dict, site_url: str | None) -> str:
 </head>
 <body>
   <main>
-    <nav aria-label="Breadcrumb"><a href="../../">Directory</a></nav>
+    <nav aria-label="Breadcrumb"><a href="../../">&larr; Directory</a></nav>
     <article>
       <h1>{escaped_name}</h1>
-      <p>{escaped_description}</p>
+      <p class="lead">{escaped_description}</p>
       <p>{source_link}</p>
-      <section><h2>Facts</h2><dl>{fact_markup}</dl></section>
+      <section><h2>Facts</h2><div class="factgrid">{fact_markup}</div></section>
       <section><h2>Categories</h2>{categories}</section>
       <section><h2>Tags</h2>{tags}</section>
       <section><h2>Commercial alternatives</h2>{alternatives}</section>
-      <section><h2>Related projects</h2><ul>{related}</ul></section>
-      <p>Last data refresh: {html_escape(project["generated_at"])}</p>
+      <section><h2>Related projects</h2><ul class="related">{related}</ul></section>
+      <p class="refresh">Last data refresh: {html_escape(project["generated_at"])}</p>
     </article>
   </main>
 </body>
