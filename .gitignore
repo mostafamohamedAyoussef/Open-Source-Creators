@@ -38,3 +38,6 @@ data/raw_repos.json
 
 # Local editor/harness config
 .claude/
+
+# Vercel build output
+dist/
