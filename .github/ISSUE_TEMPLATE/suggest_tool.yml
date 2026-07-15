@@ -1,0 +1,45 @@
+name: "Suggest a tool or category"
+description: Suggest an open-source tool to add, or a new category / commercial-alternative mapping.
+title: "[Suggestion]: "
+labels: ["enhancement", "data"]
+body:
+  - type: input
+    id: repo
+    attributes:
+      label: GitHub repository
+      description: Link to the open-source project (or the topic/category you'd like covered).
+      placeholder: https://github.com/owner/repo
+    validations:
+      required: true
+  - type: input
+    id: replaces
+    attributes:
+      label: Commercial tool it replaces (optional)
+      placeholder: e.g. Midjourney, CapCut, Notion
+  - type: dropdown
+    id: category
+    attributes:
+      label: Best-fit category
+      options:
+        - AI Image Generation
+        - AI Video Generation
+        - Video Editing
+        - AI Writing
+        - Marketing Automation
+        - Design Tools
+        - Audio
+        - Content Automation
+        - Research
+        - 3D Content
+        - Creative Coding
+        - Productivity
+        - Other / new category
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why should it be included?
+      description: One or two sentences on what it does and who it's for.
+    validations:
+      required: true

@@ -1,0 +1,31 @@
+name: "Bug report"
+description: Report something broken — wrong data, a rendering issue, or a pipeline failure.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, and what you expected instead.
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where?
+      description: URL of the affected page, or the script/file involved.
+      placeholder: https://open-source-creators.vercel.app/project/...
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Click ...
+        3. See ...
+  - type: input
+    id: env
+    attributes:
+      label: Environment (optional)
+      placeholder: Browser / OS, or Python version for pipeline issues

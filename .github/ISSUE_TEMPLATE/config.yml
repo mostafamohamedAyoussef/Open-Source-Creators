@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Live directory
+    url: https://open-source-creators.vercel.app
+    about: Browse the live directory before filing an issue.
