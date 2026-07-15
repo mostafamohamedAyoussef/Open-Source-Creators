@@ -50,8 +50,8 @@ jobs:
 
     - name: Commit refreshed data
       run: |
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
+        git config --local user.email "contact.mostafayoussef@gmail.com"
+        git config --local user.name "Mostafa Mohamed"
         git add data/processed_repos.json
         git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update database [skip ci]" && git push)
 

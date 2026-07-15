@@ -21,6 +21,14 @@ Open-Source Creators is a continuously-updated directory of open-source tools fo
 
 > ⭐ If this helps you discover great open-source tools, a star goes a long way.
 
+<p align="center">
+  <a href="https://open-source-creators.vercel.app">
+    <img src="docs/demo.gif" alt="Open-Source Creators demo — search a commercial tool, find free open-source alternatives" width="100%">
+  </a>
+  <br>
+  <em><a href="docs/demo.mp4">▶ Watch the 19s demo with sound</a> · <a href="https://open-source-creators.vercel.app">try it live</a></em>
+</p>
+
 ---
 
 ## Features

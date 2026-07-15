@@ -41,3 +41,6 @@ data/raw_repos.json
 
 # Vercel build output
 dist/
+
+# Brag video working files (only final demo asset is committed)
+brag-output/
