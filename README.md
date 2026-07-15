@@ -1,69 +1,100 @@
-# Open-Source Content Creation Directory
+<p align="center">
+  <a href="https://open-source-creators.vercel.app">
+    <img src="docs/banner.svg" alt="Open-Source Creators" width="100%">
+  </a>
+</p>
 
-This is an automated, continuously updating directory of the best open-source tools for content creators, marketers, filmmakers, and AI enthusiasts. 
+<p align="center">
+  <a href="https://open-source-creators.vercel.app"><img src="https://img.shields.io/badge/live%20demo-open--source--creators.vercel.app-ffd400?style=flat-square&labelColor=0a0a0a" alt="Live demo"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-ffd400?style=flat-square&labelColor=0a0a0a" alt="MIT License"></a>
+  <img src="https://img.shields.io/badge/updated-daily-ffd400?style=flat-square&labelColor=0a0a0a" alt="Updated daily">
+  <a href="https://github.com/mostafamohamedAyoussef/Open-Source-Creators/stargazers"><img src="https://img.shields.io/github/stars/mostafamohamedAyoussef/Open-Source-Creators?style=flat-square&labelColor=0a0a0a&color=ffd400" alt="Stars"></a>
+</p>
 
-It was built to track open-source alternatives to commercial giants like Midjourney, Runway, Jasper, Canva, ElevenLabs, and more.
+# Open-Source Creators
+
+**A collective of free open-source repos for creators — updated daily.**
+
+Open-Source Creators is a continuously-updated directory of open-source tools for content creators, marketers, filmmakers, and AI builders. It tracks open-source alternatives to commercial giants like **Midjourney, Runway, Jasper, Canva, ElevenLabs, and CapCut** — automatically crawled from GitHub, scored, categorized, and published as a fast static site every day.
+
+### 🔗 Live: **[open-source-creators.vercel.app](https://open-source-creators.vercel.app)**
+
+> ⭐ If this helps you discover great open-source tools, a star goes a long way.
+
+---
 
 ## Features
 
-- **Automated Crawling:** Python scripts utilize the GitHub Search API to continuously find and scrape repositories across categories like Video Generation, TTS, AI Agents, and Design.
-- **Smart Scoring:** Repositories are automatically scored (1-10) based on their GitHub stars, recency of updates, and completeness of documentation.
-- **Daily Updates:** A GitHub Action runs every night at midnight UTC to keep the dataset perfectly up-to-date and to deploy the newest version to GitHub Pages.
-- **Beautiful UI:** A responsive, modern frontend built with vanilla HTML/JS/CSS to search, filter, and sort through the massive database.
+- **Automated daily crawl** — a GitHub Action runs the GitHub Search API across 12 creator-focused categories (AI image/video, TTS, video editing, design, automation, 3D, and more), deduplicating by repository ID.
+- **Smart scoring** — every repo is scored 1–10 from stars, update recency, description completeness, and topic coverage, with derived signals for *hidden gems* and *emerging* projects.
+- **Commercial-alternative mapping** — surfaces which paid product each open-source tool can replace ("Replaces Midjourney", "Replaces CapCut", …).
+- **Per-project pages** — a canonical, SEO-ready static page for every one of the ~6,000+ repositories, with facts, tags, commercial alternatives, and deterministically-ranked related projects.
+- **Fast, static, dependency-light** — vanilla HTML/CSS/JS frontend; page generation uses only the Python standard library. No client framework, no database.
+- **SEO built in** — per-page canonical URLs, Open Graph/Twitter tags, JSON-LD `SoftwareApplication` structured data, and a generated `sitemap.xml`.
+- **Accessible & responsive** — semantic landmarks, keyboard-navigable controls, `prefers-reduced-motion`, and a black/white/yellow editorial design that works from 320px up.
 
-## Architecture
+## How it works
 
-* `scripts/collector.py`: Fetches raw data from the GitHub API using your Personal Access Token.
-* `scripts/processor.py`: Filters, categorizes, maps commercial alternatives, calculates scores, and triggers static-site generation.
-* `scripts/site_generator.py`: Generates a canonical `/project/<slug>/` page for every repository, per-project JSON, a sitemap, and catalog metadata. Includes deterministic, explainable related-project ranking.
-* `data/processed_repos.json`: The compiled database used by the frontend.
-* `index.html` & `app.js`: The frontend interface. Cards link to per-project pages.
-* `tests/`: Unit tests (`python -m unittest discover`).
+```
+GitHub Search API
+        │
+        ▼
+scripts/collector.py     → data/raw_repos.json      (crawl + dedupe by repo id)
+        │
+        ▼
+scripts/processor.py     → data/processed_repos.json (score, categorize, map alternatives)
+        │
+        ▼
+scripts/site_generator.py → project/<slug>/index.html + data/projects/*.json
+                            + sitemap.xml + catalog-meta.json
+        │
+        ▼
+build.py                 → dist/  (assembled static site, deployed to Vercel)
+```
 
-Generated output (`project/`, `data/projects/`, `sitemap.xml`, `data/catalog-meta.json`) is rebuilt on every run and is git-ignored; the GitHub Action regenerates and deploys it.
+The whole pipeline runs daily in GitHub Actions and redeploys automatically on Vercel.
 
-### Configuration
+## Local development
 
-* `SITE_URL` (optional): Public site URL used for canonical links and the sitemap. When unset, pages still render with relative links and absolute canonical/sitemap locations are omitted. Set it as a GitHub Actions **repository variable** for deployment.
+```bash
+# 1. Install Python dependencies (only the collector needs these)
+pip install -r requirements.txt
 
-## Local Setup
+# 2. Provide a GitHub token for the crawler (local .env or shell env)
+echo "GITHUB_TOKEN=ghp_your_token_here" > .env
 
-If you want to run or test the directory locally:
+# 3. Run the pipeline
+python scripts/collector.py     # crawl GitHub  → data/raw_repos.json
+python scripts/processor.py     # score + build → data/processed_repos.json + site
 
-1. **Install Python Dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+# 4. Serve locally
+python -m http.server 8000      # open http://localhost:8000
+```
 
-2. **Add Your GitHub Token (Local Only):**
-   Create a `.env` file in the root of the project with your GitHub Personal Access Token (PAT):
-   ```
-   GITHUB_TOKEN=ghp_your_actual_token_here
-   ```
+Run the test suite:
 
-3. **Run the Data Pipeline:**
-   ```bash
-   python scripts/collector.py
-   python scripts/processor.py
-   ```
+```bash
+PYTHONPATH=. python -m unittest discover -v
+```
 
-4. **Serve the Frontend:**
-   You must use a local server to view the frontend due to CORS restrictions with fetching local JSON files.
-   ```bash
-   python -m http.server 8000
-   ```
-   Then open `http://localhost:8000` in your browser.
+## Deployment
 
-## Deploying to GitHub Pages
+The site deploys to **Vercel** from `main`. `vercel.json` runs `python3 build.py`, which assembles a clean `dist/` (static frontend + generated project pages + sitemap) that Vercel serves. Canonical URLs use Vercel's `VERCEL_PROJECT_PRODUCTION_URL` automatically, or set a `SITE_URL` variable to pin a custom domain. The generated output is rebuilt on every deploy and is not committed to git.
 
-1. Push this code to a public repository on your GitHub account.
-2. The workflow uses the built-in `GITHUB_TOKEN` that Actions provides automatically — you do **not** need to create a secret for it. (The built-in token has a lower search-API rate limit; if the collector hits limits, add a personal access token as a secret named e.g. `GH_PAT` and reference it in the workflow instead.)
-3. (Optional) Under **Settings > Secrets and variables > Actions > Variables**, add a `SITE_URL` variable set to your Pages URL (e.g. `https://<user>.github.io/<repo>`) so canonical links and the sitemap use absolute URLs.
-4. Navigate to **Settings > Pages**, set the source to **GitHub Actions**, and the workflow will build and deploy automatically.
+## Roadmap
+
+Per-project stable IDs and JSON artifacts are intentional seams for what's next:
+
+- [ ] **Codex-assisted PR review & release automation** in CI
+- [ ] **AI-generated project summaries** (one-line "what this does / who it's for")
+- [ ] Historical star-growth analytics and trending/fastest-growing views
+- [ ] Semantic search over embeddings
+- [ ] "Open-source alternatives to X" landing pages
+- [ ] Public JSON API + MCP server for AI assistants
 
 ## Contributing
 
-The categories and commercial mappings are hardcoded inside `scripts/collector.py` and `scripts/processor.py`. Feel free to open a PR to expand the search topics or map new commercial tools!
+Contributions are very welcome — especially new categories, better commercial-alternative mappings, and data-quality fixes. See **[CONTRIBUTING.md](CONTRIBUTING.md)** to get started. Please also read the **[Code of Conduct](CODE_OF_CONDUCT.md)**.
 
 ## License
 

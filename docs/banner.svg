@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320" role="img" aria-label="Open-Source Creators">
+  <rect width="1280" height="320" fill="#0a0a0a"/>
+  <rect x="0" y="0" width="1280" height="6" fill="#ffd400"/>
+
+  <!-- logo cube (isometric maze, two exits) -->
+  <g transform="translate(96,110) scale(1.0)">
+    <path d="M50 16 L84 36 L50 56 L16 36 Z" fill="#ffd400"/>
+    <path d="M16 36 L50 56 L50 90 L16 70 Z" fill="#0f0f0f"/>
+    <path d="M84 36 L50 56 L50 90 L84 70 Z" fill="#e8bf00"/>
+    <path d="M50 8 L50 24 L36 32 L50 40 L64 32" fill="none" stroke="#0f0f0f" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M33 52 L33 66 L50 76" fill="none" stroke="#ffd400" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M67 52 L67 66 L50 76 L50 96" fill="none" stroke="#0f0f0f" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <text x="210" y="150" font-family="'Helvetica Neue',Arial,sans-serif" font-weight="900" font-size="72" letter-spacing="-2" fill="#f5f5f0"><tspan fill="#ffd400">OS</tspan>Creators</text>
+  <text x="212" y="196" font-family="'Helvetica Neue',Arial,sans-serif" font-weight="700" font-size="26" fill="#9a9a9a">A collective of free open-source repos for creators &#8212; updated daily.</text>
+  <text x="212" y="236" font-family="'Helvetica Neue',Arial,sans-serif" font-weight="700" font-size="18" letter-spacing="1" fill="#666">6,000+ TOOLS &#183; 12 CATEGORIES &#183; DAILY GITHUB CRAWL &#183; STATIC &amp; FAST</text>
+</svg>
