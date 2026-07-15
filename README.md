@@ -64,3 +64,7 @@ If you want to run or test the directory locally:
 ## Contributing
 
 The categories and commercial mappings are hardcoded inside `scripts/collector.py` and `scripts/processor.py`. Feel free to open a PR to expand the search topics or map new commercial tools!
+
+## License
+
+Released under the [MIT License](LICENSE).
