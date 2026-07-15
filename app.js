@@ -1,6 +1,8 @@
 let allRepos = [];
 let filteredRepos = [];
 let currentCategory = 'All';
+let visibleCount = 0;
+const PAGE_SIZE = 60;
 
 const DOM = {
     grid: document.getElementById('toolsGrid'),
@@ -8,13 +10,20 @@ const DOM = {
     searchInput: document.getElementById('searchInput'),
     categoryFilters: document.getElementById('categoryFilters'),
     sortSelect: document.getElementById('sortSelect'),
-    resultsInfo: document.getElementById('resultsInfo')
+    resultsInfo: document.getElementById('resultsInfo'),
+    loadMore: document.getElementById('loadMore'),
+    statTools: document.getElementById('statTools'),
+    statCats: document.getElementById('statCats'),
 };
 
 function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+function formatCount(n) {
+    return n.toLocaleString('en-US');
 }
 
 async function init() {
@@ -24,13 +33,21 @@ async function init() {
         allRepos = await response.json();
         filteredRepos = [...allRepos];
 
+        setupStats();
         setupCategories();
         setupEventListeners();
-        render();
+        filterAndSort();
     } catch (error) {
         DOM.loading.innerHTML = `Error loading data: ${escapeHtml(error.message)}<br>Make sure you are running this through a local server.`;
         console.error(error);
     }
+}
+
+function setupStats() {
+    const cats = new Set();
+    allRepos.forEach(r => (r.categories || []).forEach(c => cats.add(c)));
+    if (DOM.statTools) DOM.statTools.textContent = formatCount(allRepos.length);
+    if (DOM.statCats) DOM.statCats.textContent = formatCount(cats.size);
 }
 
 function setupCategories() {
@@ -42,13 +59,17 @@ function setupCategories() {
     const catArray = ['All', ...Array.from(categories).sort()];
 
     DOM.categoryFilters.innerHTML = catArray.map(cat =>
-        `<button class="filter-btn ${cat === 'All' ? 'active' : ''}" data-cat="${escapeHtml(cat)}">${escapeHtml(cat)}</button>`
+        `<button class="filter-btn ${cat === 'All' ? 'active' : ''}" data-cat="${escapeHtml(cat)}" aria-pressed="${cat === 'All'}">${escapeHtml(cat)}</button>`
     ).join('');
 
     DOM.categoryFilters.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            DOM.categoryFilters.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            DOM.categoryFilters.querySelectorAll('.filter-btn').forEach(b => {
+                b.classList.remove('active');
+                b.setAttribute('aria-pressed', 'false');
+            });
             e.target.classList.add('active');
+            e.target.setAttribute('aria-pressed', 'true');
             currentCategory = e.target.dataset.cat;
             filterAndSort();
         });
@@ -58,17 +79,22 @@ function setupCategories() {
 function setupEventListeners() {
     DOM.searchInput.addEventListener('input', () => filterAndSort());
     DOM.sortSelect.addEventListener('change', () => filterAndSort());
+    DOM.loadMore.addEventListener('click', () => {
+        visibleCount = Math.min(visibleCount + PAGE_SIZE, filteredRepos.length);
+        renderCards();
+    });
 }
 
 function filterAndSort() {
-    const query = DOM.searchInput.value.toLowerCase();
+    const query = DOM.searchInput.value.toLowerCase().trim();
     const sortBy = DOM.sortSelect.value;
 
     filteredRepos = allRepos.filter(repo => {
         const matchesCat = currentCategory === 'All' || (repo.categories || []).includes(currentCategory);
+        if (!matchesCat) return false;
+        if (!query) return true;
         const searchStr = `${repo.name} ${repo.description || ''} ${(repo.tags || []).join(' ')} ${(repo.commercial_alternatives || []).join(' ')}`.toLowerCase();
-        const matchesQuery = searchStr.includes(query);
-        return matchesCat && matchesQuery;
+        return searchStr.includes(query);
     });
 
     filteredRepos.sort((a, b) => {
@@ -82,6 +108,7 @@ function filterAndSort() {
         return 0;
     });
 
+    visibleCount = Math.min(PAGE_SIZE, filteredRepos.length);
     render();
 }
 
@@ -111,38 +138,45 @@ function projectCard(repo, rank) {
     return `
         <div class="card" role="listitem">
             <div class="rank">${rankLabel}</div>
-            <div class="card-header">
-                ${titleTag}
-            </div>
+            ${titleTag}
             <div class="card-desc">${escapeHtml(repo.description || 'No description provided.')}</div>
             <div class="card-meta">
                 ${alts}
                 ${tags}
             </div>
             <div class="card-footer">
-                <a class="star-link" href="${escapeHtml(repo.html_url)}" target="_blank" rel="noreferrer" title="View on GitHub">★ ${stars}</a>
+                <a class="star-link" href="${escapeHtml(repo.html_url)}" target="_blank" rel="noreferrer" title="View on GitHub">&#9733; ${stars}</a>
                 <span>Updated ${date}</span>
             </div>
         </div>
     `;
 }
 
+function renderCards() {
+    const slice = filteredRepos.slice(0, visibleCount);
+    DOM.grid.innerHTML = slice.map((repo, i) => projectCard(repo, i + 1)).join('');
+
+    const remaining = filteredRepos.length - visibleCount;
+    if (remaining > 0) {
+        DOM.loadMore.hidden = false;
+        DOM.loadMore.textContent = `Load more tools (${formatCount(remaining)} left)`;
+    } else {
+        DOM.loadMore.hidden = true;
+    }
+}
+
 function render() {
     DOM.loading.style.display = 'none';
-    DOM.resultsInfo.textContent = `Showing ${filteredRepos.length} tools`;
 
     if (filteredRepos.length === 0) {
-        DOM.grid.innerHTML = '<div class="empty-state">No tools found matching your search.</div>';
+        DOM.resultsInfo.textContent = '';
+        DOM.loadMore.hidden = true;
+        DOM.grid.innerHTML = `<div class="empty-state"><strong>No tools match your search.</strong>Try a different term or clear the category filter.</div>`;
         return;
     }
 
-    const renderList = filteredRepos.slice(0, 200);
-
-    DOM.grid.innerHTML = renderList.map((repo, i) => projectCard(repo, i + 1)).join('');
-
-    if (filteredRepos.length > 200) {
-         DOM.grid.innerHTML += `<div class="overflow-note">And ${filteredRepos.length - 200} more&hellip; (refine search to see them)</div>`;
-    }
+    DOM.resultsInfo.innerHTML = `Showing <span class="count">${formatCount(Math.min(visibleCount, filteredRepos.length))}</span> of <span class="count">${formatCount(filteredRepos.length)}</span> tools`;
+    renderCards();
 }
 
 init();

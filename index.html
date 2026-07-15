@@ -3,33 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Open-Source Content Creation Directory — Find Open-Source Creator Tools</title>
-    <meta name="description" content="The continuously updated directory of open-source tools for content creators, replacing commercial giants like Midjourney, Runway, Canva, and more.">
-    <meta property="og:title" content="Open-Source Content Creation Directory">
-    <meta property="og:description" content="Search and discover open-source alternatives to commercial creative tools. Updated daily.">
+    <title>Open-Source Creators — a collective of free open-source repos for creators, updated daily</title>
+    <meta name="description" content="A collective of free open-source repos for creators, updated daily. Search open-source alternatives to commercial creative tools like Midjourney, Runway, Canva, and ElevenLabs.">
+    <meta property="og:title" content="Open-Source Creators">
+    <meta property="og:description" content="A collective of free open-source repos for creators, updated daily.">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="theme-color" content="#0a0a0a">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header class="header" role="banner">
+    <div class="masthead" role="banner">
+        <div class="container masthead-inner">
+            <a class="brand" href="/" aria-label="Open-Source Creators home">
+                <svg class="brand-mark" width="30" height="30" viewBox="0 0 100 100" aria-hidden="true">
+                    <path d="M50 16 L84 36 L50 56 L16 36 Z" fill="#ffd400"/>
+                    <path d="M16 36 L50 56 L50 90 L16 70 Z" fill="#0f0f0f"/>
+                    <path d="M84 36 L50 56 L50 90 L84 70 Z" fill="#e8bf00"/>
+                    <path d="M50 8 L50 24 L36 32 L50 40 L64 32" fill="none" stroke="#0f0f0f" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M33 52 L33 66 L50 76" fill="none" stroke="#ffd400" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M67 52 L67 66 L50 76 L50 96" fill="none" stroke="#0f0f0f" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="brand-word"><span class="brand-accent">OS</span>Creators</span>
+            </a>
+            <a class="masthead-link" href="https://github.com/mostafamohamedAyoussef/Open-Source-Creators" target="_blank" rel="noreferrer">GitHub &#8599;</a>
+        </div>
+    </div>
+
+    <header class="hero">
         <div class="container">
-            <span class="kicker">Updated daily &middot; open-source only</span>
             <h1>Find the open-source tool that <span class="accent">replaces</span> the one you pay for.</h1>
-            <p class="tagline">The continuously updated directory of open-source tools for creators, replacing commercial giants like Midjourney, Runway, Canva, and ElevenLabs.</p>
+            <p class="tagline">A collective of free open-source repos for creators &mdash; updated daily. Discover alternatives to commercial giants like Midjourney, Runway, Canva, and ElevenLabs.</p>
 
             <div class="search-bar">
                 <label for="searchInput" class="sr-only">Search tools</label>
                 <div class="search-row">
+                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                     <input type="search" id="searchInput" placeholder="Search by name, description, or commercial alternative (e.g. Runway, CapCut)..." autocomplete="off">
                 </div>
             </div>
 
+            <dl class="stats-strip" id="statsStrip" aria-label="Directory statistics">
+                <div class="stat"><dt>Tools</dt><dd id="statTools">&mdash;</dd></div>
+                <div class="stat"><dt>Categories</dt><dd id="statCats">&mdash;</dd></div>
+                <div class="stat"><dt>Refreshed</dt><dd>Daily</dd></div>
+            </dl>
+        </div>
+    </header>
+
+    <div class="controls">
+        <div class="container">
             <nav class="filters" id="categoryFilters" aria-label="Category filters">
                 <!-- Category buttons injected via JS -->
             </nav>
-
             <div class="sort-controls">
                 <label for="sortSelect">Sort by</label>
                 <select id="sortSelect">
@@ -39,19 +67,24 @@
                 </select>
             </div>
         </div>
-    </header>
+    </div>
 
     <main class="container" role="main">
-        <div id="loading" class="loading" aria-live="polite">Loading database...</div>
+        <div id="loading" class="loading" aria-live="polite">
+            <span class="spinner" aria-hidden="true"></span> Loading the collective&hellip;
+        </div>
         <div id="resultsInfo" class="results-info" aria-live="polite"></div>
         <div class="grid" id="toolsGrid" role="list">
             <!-- Cards injected via JS -->
+        </div>
+        <div class="loadmore-wrap">
+            <button id="loadMore" class="loadmore" hidden>Load more tools</button>
         </div>
     </main>
 
     <footer role="contentinfo">
         <div class="container">
-            <p>Updated daily via GitHub Actions &bull; Built with open-source tools &bull; <a href="https://github.com/mostafamohamedAyoussef/Open-Source-Creators" target="_blank" rel="noreferrer">Source on GitHub</a></p>
+            <p>A collective of free open-source repos for creators &bull; updated daily via GitHub Actions &bull; <a href="https://github.com/mostafamohamedAyoussef/Open-Source-Creators" target="_blank" rel="noreferrer">Source on GitHub</a></p>
         </div>
     </footer>
 

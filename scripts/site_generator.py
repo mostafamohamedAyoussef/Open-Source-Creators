@@ -6,6 +6,21 @@ from html import escape as html_escape
 from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
 
+# Inline brand mark (isometric cube maze, two exits) — matches the homepage logo.
+LOGO_SVG = (
+    '<svg class="brand-mark" width="26" height="26" viewBox="0 0 100 100" aria-hidden="true">'
+    '<path d="M50 16 L84 36 L50 56 L16 36 Z" fill="#ffd400"/>'
+    '<path d="M16 36 L50 56 L50 90 L16 70 Z" fill="#0f0f0f"/>'
+    '<path d="M84 36 L50 56 L50 90 L84 70 Z" fill="#e8bf00"/>'
+    '<path d="M50 8 L50 24 L36 32 L50 40 L64 32" fill="none" stroke="#0f0f0f" '
+    'stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>'
+    '<path d="M33 52 L33 66 L50 76" fill="none" stroke="#ffd400" '
+    'stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>'
+    '<path d="M67 52 L67 66 L50 76 L50 96" fill="none" stroke="#0f0f0f" '
+    'stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>'
+    "</svg>"
+)
+
 # Self-contained stylesheet so each project page renders correctly without an
 # extra network request or a relative path back to the site root. Design system
 # matches the homepage: black canvas, hard rules, yellow as the sole accent.
@@ -17,9 +32,16 @@ PAGE_STYLE = """
     line-height: 1.6; margin: 0; padding: 0 1rem 4rem;
     background: #0a0a0a; color: #f5f5f0;
   }
+  .site-masthead { border-bottom: 1px solid #262626; }
+  .site-masthead .inner {
+    max-width: 720px; margin: 0 auto; height: 56px; display: flex; align-items: center;
+  }
+  .brand { display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; color: #f5f5f0; }
+  .brand-word { font-weight: 900; font-size: 1.05rem; letter-spacing: -0.01em; }
+  .brand-word .a { color: #ffd400; }
   main { max-width: 720px; margin: 0 auto; }
   nav[aria-label="Breadcrumb"] {
-    margin: 2rem 0 1.5rem; font-size: 0.8rem; font-weight: 700;
+    margin: 1.75rem 0 1.5rem; font-size: 0.8rem; font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.05em;
   }
   a { color: #ffd400; }
@@ -204,17 +226,22 @@ def _render_project_page(record: dict, site_url: str | None) -> str:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{escaped_name} | Open-Source Content Creation Directory</title>
+  <title>{escaped_name} | Open-Source Creators</title>
   <meta name="description" content="{html_escape(str(description), quote=True)}">
   <meta property="og:title" content="{html_escape(str(name), quote=True)}">
   <meta property="og:description" content="{html_escape(str(description), quote=True)}">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   {canonical}
   <style>{PAGE_STYLE}</style>
   {json_ld}
 </head>
 <body>
+  <div class="site-masthead"><div class="inner">
+    <a class="brand" href="../../">{LOGO_SVG}<span class="brand-word"><span class="a">OS</span>Creators</span></a>
+  </div></div>
   <main>
     <nav aria-label="Breadcrumb"><a href="../../">&larr; Directory</a></nav>
     <article>

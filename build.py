@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent
 DIST = ROOT / "dist"
 
 # Static frontend assets copied verbatim into the deploy output.
-STATIC_FILES = ("index.html", "app.js", "styles.css")
+STATIC_FILES = ("index.html", "app.js", "styles.css", "favicon.svg")
 
 
 def resolve_site_url() -> str | None:
