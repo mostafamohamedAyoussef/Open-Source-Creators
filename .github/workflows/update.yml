@@ -5,15 +5,14 @@ on:
     - cron: '0 0 * * *'
   workflow_dispatch:
 
-# Allow the workflow to commit refreshed data and deploy to Pages.
+# The workflow only needs to commit refreshed data. Deployment is Vercel's job:
+# it builds from main on every push, so there is nothing to publish from here.
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 # Avoid overlapping scheduled runs.
 concurrency:
-  group: pages
+  group: daily-update
   cancel-in-progress: false
 
 jobs:
@@ -52,12 +51,10 @@ jobs:
       run: PYTHONPATH=. python scripts/processor.py
 
     - name: Verify generated site output
-      # The processor generates the site into the repo root, which is exactly
-      # what the upload-pages-artifact step below ships (path: '.'). So we audit
-      # the working tree in place rather than rebuilding — no redundant build,
-      # and we verify the literal bytes that get deployed. Runs before the data
-      # commit and the deploy so an inconsistent build fails loudly instead of
-      # shipping (and instead of committing data that generated a broken site).
+      # The processor generates the site into the repo root, so we audit the
+      # working tree in place rather than rebuilding. Runs before the data commit
+      # so an inconsistent build fails loudly here instead of committing data
+      # that would generate a broken site on Vercel's next deploy.
       run: python scripts/verify_site.py .
 
     - name: Commit refreshed data
@@ -66,17 +63,3 @@ jobs:
         git config --local user.name "Mostafa Mohamed"
         git add data/processed_repos.json
         git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update database [skip ci]" && git push)
-
-    - name: Setup Pages
-      uses: actions/configure-pages@v4
-
-    - name: Upload artifact
-      uses: actions/upload-pages-artifact@v3
-      with:
-        # Uploads the full working tree, including freshly generated project pages
-        # and sitemap that are not committed to git.
-        path: '.'
-
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
