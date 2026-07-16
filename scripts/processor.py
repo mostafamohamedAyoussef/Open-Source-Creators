@@ -24,6 +24,97 @@ COMMERCIAL_MAPPING = {
     "Figma": ["figma", "design-tool", "ui-design", "ux-design", "penpot"]
 }
 
+# A curated list is not a tool. The scoring signals (stars, recency, a complete
+# description, rich topics) are exactly what "awesome-*" lists maximise, so without
+# a correction they outrank the software they link to: 97 of 180 awesome-* repos
+# scored >= 8.0, and poteto/hiring-without-whiteboards — an interview-practices
+# list — scored a perfect 10.0 inside "Design Tools".
+#
+# These repos are kept rather than dropped (awesome-creative-coding is genuinely
+# useful to a creator) but capped below any healthy tool, so browsing a category by
+# score surfaces software first. They are also tagged so the UI can filter them.
+NON_TOOL_SCORE_CAP = 5.0
+
+# Topics a repo uses to self-identify as a reading list / collection.
+#
+# Kept deliberately narrow. Broader tags produced false positives against the real
+# dataset: "directory" flagged backlink-pilot (a tool that submits products TO
+# directories) and "reference"/"collection" are used by plenty of working software.
+# A false positive caps a real tool at 5.0 and buries it — strictly worse than
+# letting one list rank high — so this errs toward precision over recall.
+_LIST_TOPICS = frozenset({
+    "awesome", "awesome-list", "awesome-lists", "curated-list", "list", "lists",
+    "resources",
+})
+
+# Topics that mean the repo is educational or career material, not a creator tool.
+# Homonyms make this necessary: hiring-without-whiteboards is tagged "whiteboard"
+# (as in whiteboard interviews) and so was collected into Design Tools.
+_NON_TOOL_TOPICS = frozenset({
+    "hiring", "interview", "interviews", "interview-questions", "interview-practice",
+    "jobs", "job-search", "career", "careers", "resume", "cv",
+    "tutorial", "tutorials", "course", "courses", "book", "books", "ebook",
+    "roadmap", "cheatsheet", "cheatsheets", "guide", "guides", "papers",
+    "learning", "education", "study", "curriculum", "examples", "boilerplate-list",
+})
+
+# Description phrasings that announce a list.
+#
+# A bare "^list of ..." was tried and rejected: it flagged Matalogue, a real Blender
+# addon described as "List of node trees to switch between quickly". These patterns
+# require an explicit curation word, so "generate a list of captions" (a tool) and
+# "List of node trees" (a tool) both stay clear, while "A curated list of X" is caught.
+_LIST_DESC_PATTERNS = tuple(re.compile(p) for p in (
+    r"\b(?:curated|awesome|comprehensive|exhaustive|ultimate|definitive)\s+"
+    r"(?:and\s+\w+\s+)?(?:list|collection|catalog(?:ue)?|index)\b",
+    r"\blist\s+of\s+(?:awesome|free|open[- ]source|useful|the\s+best)\b",
+    r"\bcurated\s+(?:list|collection|set)\b",
+    r"\bawesome\s+list\b",
+))
+
+
+# Topics by which a repo self-identifies as executable software. These veto a
+# topic-only list match, because GitHub topics name a repo's SUBJECT as readily as
+# its nature: backlink-pilot is a Playwright automation CLI tagged "awesome-lists"
+# because it SUBMITS products TO awesome-lists. Treating that tag as a self-
+# description mislabels the tool — the same "mention is not identity" error that
+# made a prompt-list claim it "Replaces Runway".
+_TOOL_TOPICS = frozenset({
+    "cli", "command-line", "automation", "library", "framework", "api", "sdk",
+    "plugin", "addon", "extension", "bot", "daemon", "server", "self-hosted",
+    "docker", "playwright", "selenium", "electron", "desktop-app", "webapp",
+    "generator", "editor", "compiler", "parser", "package", "npm-package",
+})
+
+
+def is_curated_list(repo):
+    """True when a repo is a reading list / resource collection rather than a tool.
+
+    Signals, in order of confidence:
+      1. The awesome-* naming convention — definitive, not vetoable.
+      2. An explicit curation phrase in the description ("A curated list of ...").
+      3. Self-identifying topics ("awesome-list", "list", "resources") — but only
+         when the repo does NOT also claim to be software (see _TOOL_TOPICS), since
+         a topic can name what a tool acts on rather than what it is.
+    """
+    name = str(repo.get("name", "")).lower()
+    if name.startswith("awesome-") or name == "awesome":
+        return True
+
+    desc = str(repo.get("description") or "").lower()
+    if any(p.search(desc) for p in _LIST_DESC_PATTERNS):
+        return True
+
+    topics = {str(t).lower() for t in repo.get("topics", [])}
+    return bool(topics & _LIST_TOPICS) and not (topics & _TOOL_TOPICS)
+
+
+def is_non_tool(repo):
+    """True when a repo is educational/career material rather than a creator tool."""
+    topics = {str(t).lower() for t in repo.get("topics", [])}
+    return bool(topics & _NON_TOOL_TOPICS)
+
+
 def calculate_score(repo):
     stars = repo.get("stargazers_count", 0)
     score = min(math.log10(max(stars, 1)) * 1.5, 6.0) # Up to 6 points from stars
@@ -115,8 +206,19 @@ def process_repos(root_dir=None):
         repo['score'] = calculate_score(repo)
         repo['commercial_alternatives'] = map_commercial_alternative(repo)
 
+        # A list about tools, or a career/learning resource, is not a creator tool.
+        # Cap it below any healthy tool so category browsing surfaces software first.
+        repo['is_curated_list'] = is_curated_list(repo)
+        repo['is_non_tool'] = is_non_tool(repo)
+        if repo['is_curated_list'] or repo['is_non_tool']:
+            repo['score'] = min(repo['score'], NON_TOOL_SCORE_CAP)
+            # A list cannot "replace Midjourney" — it only links to things that might.
+            repo['commercial_alternatives'] = []
+
         all_tags = set(repo.get("topics", []))
         all_tags.update([cat.lower() for cat in repo.get("categories", [])])
+        if repo['is_curated_list']:
+            all_tags.add("list")
         repo['tags'] = list(all_tags)
 
         now = datetime.now(timezone.utc)

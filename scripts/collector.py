@@ -39,13 +39,28 @@ SEARCH_QUERIES = {
         "topic:ai-writing", "topic:text-generation", "topic:copywriting",
         "topic:summarization", "topic:paraphrasing", "topic:grammar-checker"
     ],
+    # NOTE ON TOPIC BREADTH: GitHub search matches topics literally, so a query is
+    # only as good as the tag maintainers happened to choose. Narrow "product-shaped"
+    # topics silently miss flagship projects: topic:design-tool missed penpot/penpot
+    # (56k stars, tagged design/prototyping/ux-design) and topic:social-media-automation
+    # missed gitroomhq/postiz-app (33k stars, tagged scheduling-tool). Prefer the tags
+    # maintainers actually use over the tag we wish they used.
     "Marketing Automation": [
         "topic:marketing-automation", "topic:social-media-automation",
-        "topic:seo", "topic:newsletter-generator", "topic:landing-page-builder"
+        "topic:seo", "topic:newsletter-generator", "topic:landing-page-builder",
+        # Reach the schedulers people actually publish with (Buffer/Hootsuite class).
+        "topic:social-media-scheduling-tool", "topic:scheduling-tool",
+        "topic:social-media", "topic:email-marketing", "topic:newsletter",
     ],
     "Design Tools": [
         "topic:design-tool", "topic:whiteboard", "topic:presentation-generator",
-        "topic:infographic", "topic:vector-graphics"
+        "topic:infographic", "topic:vector-graphics",
+        # Broad tags the flagship editors actually use (penpot, excalidraw, graphite).
+        "topic:design", "topic:prototyping", "topic:ux-design", "topic:design-system",
+        # Icon/type/color systems were a total blind spot: no lucide, heroicons,
+        # tabler, phosphor, or simple-icons appeared anywhere in the dataset.
+        "topic:icons", "topic:svg-icons", "topic:iconset",
+        "topic:color-palette", "topic:fonts", "topic:typography",
     ],
     "Audio": [
         "topic:text-to-speech", "topic:tts", "topic:voice-cloning",
