@@ -46,7 +46,19 @@ jobs:
     - name: Run Data Processor and Site Generator
       env:
         SITE_URL: ${{ vars.SITE_URL }}
-      run: python scripts/processor.py
+      # PYTHONPATH=. is required: processor.py does `from scripts.site_generator
+      # import build_site`, but `python scripts/processor.py` puts scripts/ on
+      # sys.path rather than the repo root, so the import fails without it.
+      run: PYTHONPATH=. python scripts/processor.py
+
+    - name: Verify generated site output
+      # The processor generates the site into the repo root, which is exactly
+      # what the upload-pages-artifact step below ships (path: '.'). So we audit
+      # the working tree in place rather than rebuilding — no redundant build,
+      # and we verify the literal bytes that get deployed. Runs before the data
+      # commit and the deploy so an inconsistent build fails loudly instead of
+      # shipping (and instead of committing data that generated a broken site).
+      run: python scripts/verify_site.py .
 
     - name: Commit refreshed data
       run: |

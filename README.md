@@ -64,19 +64,31 @@ The whole pipeline runs daily in GitHub Actions and redeploys automatically on V
 
 ## Local development
 
-```bash
-# 1. Install Python dependencies (only the collector needs these)
-pip install -r requirements.txt
+**Quickest path — no GitHub token needed.** The dataset is committed, so you can build and serve the whole site straight from it:
 
-# 2. Provide a GitHub token for the crawler (local .env or shell env)
+```bash
+python build.py                        # assembles dist/ (~7s, 6,000+ pages)
+cd dist && python -m http.server 8000  # open http://localhost:8000
+```
+
+> The homepage fetches the generated `data/index.json` (a slim, minified index — only the fields the page renders). It's build output, so **you must run `build.py` before serving**; opening the site without building shows the loading-error state.
+
+**Full pipeline** (re-crawls GitHub — needs a token):
+
+```bash
+pip install -r requirements.txt              # only the collector needs deps
 echo "GITHUB_TOKEN=ghp_your_token_here" > .env
 
-# 3. Run the pipeline
-python scripts/collector.py     # crawl GitHub  → data/raw_repos.json
-python scripts/processor.py     # score + build → data/processed_repos.json + site
+python scripts/collector.py                  # crawl GitHub → data/raw_repos.json
+PYTHONPATH=. python scripts/processor.py     # score + generate the site
+```
 
-# 4. Serve locally
-python -m http.server 8000      # open http://localhost:8000
+> `PYTHONPATH=.` is required: `processor.py` imports `scripts.site_generator`, and running a script puts `scripts/` on `sys.path` rather than the repo root.
+
+**Audit the generated output** (page/record parity, duplicate slugs, dangling related links, sitemap + index integrity):
+
+```bash
+python scripts/verify_site.py dist           # exits non-zero on any inconsistency
 ```
 
 Run the test suite:

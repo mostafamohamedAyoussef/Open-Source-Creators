@@ -1,5 +1,6 @@
 import json
 import re
+from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timezone
 from html import escape as html_escape
@@ -100,40 +101,162 @@ def build_project_record(repo: dict, generated_at: str) -> dict:
     return record
 
 
+class RelatedIndex:
+    """Precomputed inverted index that makes related-project ranking near-linear.
+
+    The naive ranking scores every project against every other project
+    (~38M comparisons for 6.1k repos). Relevance is
+    ``3*shared_categories + 2*shared_tags + 2*shared_alternatives + same_language``,
+    so any candidate scoring 2 or more MUST share at least one category, tag, or
+    commercial alternative. That lets us reach every possible positive-relevance
+    candidate through an inverted index instead of a full scan:
+
+    * tier A - shares >=1 category/tag/alternative (relevance >= 2), scored exactly
+    * tier B - shares only the language (relevance exactly 1)
+    * tier C - shares nothing (relevance 0, the fallback that pads short lists)
+
+    Ordering within every tier is (score, stargazers_count) descending with ties
+    broken by original input order, which is exactly what the previous stable
+    ``sort(..., reverse=True)`` produced. Tiers concatenate in relevance order,
+    so the output is byte-for-byte identical to the naive implementation.
+    """
+
+    def __init__(self, candidates: list[dict]):
+        self.candidates = candidates
+        self.by_category: dict[object, list[int]] = defaultdict(list)
+        self.by_tag: dict[object, list[int]] = defaultdict(list)
+        self.by_alternative: dict[object, list[int]] = defaultdict(list)
+
+        for position, candidate in enumerate(candidates):
+            for category in candidate.get("categories") or []:
+                self.by_category[category].append(position)
+            for tag in candidate.get("tags") or []:
+                self.by_tag[tag].append(position)
+            for alternative in candidate.get("commercial_alternatives") or []:
+                self.by_alternative[alternative].append(position)
+
+        # Stable sort on the descending (score, stars) key. Filtering this global
+        # order down to any subset yields the same relative order that stably
+        # sorting just that subset would, so it doubles as the tie-break order
+        # for every tier.
+        self.base_order: list[int] = sorted(
+            range(len(candidates)),
+            key=lambda position: (
+                candidates[position].get("score", 0),
+                candidates[position].get("stargazers_count", 0),
+            ),
+            reverse=True,
+        )
+        self.base_rank: dict[int, int] = {
+            position: rank for rank, position in enumerate(self.base_order)
+        }
+        self.language_order: dict[object, list[int]] = defaultdict(list)
+        for position in self.base_order:
+            language = candidates[position].get("language")
+            if language:
+                self.language_order[language].append(position)
+
+    def rank(self, project: dict, limit: int = 6) -> list[dict]:
+        candidates = self.candidates
+        project_language = project.get("language")
+        project_id = project.get("id")
+        has_language = bool(project_language)
+
+        # Tier A: accumulate exact relevance for every candidate reachable via a
+        # shared category, tag, or commercial alternative.
+        scores: dict[int, int] = defaultdict(int)
+        for category in project.get("categories") or []:
+            for position in self.by_category.get(category, ()):
+                scores[position] += 3
+        for tag in project.get("tags") or []:
+            for position in self.by_tag.get(tag, ()):
+                scores[position] += 2
+        for alternative in project.get("commercial_alternatives") or []:
+            for position in self.by_alternative.get(alternative, ()):
+                scores[position] += 2
+        if has_language:
+            for position in scores:
+                if candidates[position].get("language") == project_language:
+                    scores[position] += 1
+
+        # Exclusion is by id (matching the original), not identity.
+        for position in [p for p in scores if candidates[p].get("id") == project_id]:
+            del scores[position]
+
+        base_rank = self.base_rank
+        tier_a = sorted(scores, key=lambda position: base_rank[position])
+        tier_a.sort(key=lambda position: scores[position], reverse=True)
+
+        related = tier_a[:limit]
+        if len(related) >= limit:
+            return [candidates[position] for position in related]
+
+        # Tier B: relevance exactly 1 - same language, nothing else shared.
+        if has_language:
+            for position in self.language_order.get(project_language, ()):
+                if len(related) >= limit:
+                    break
+                if position in scores or candidates[position].get("id") == project_id:
+                    continue
+                related.append(position)
+
+        # Tier C: relevance 0 fallback that pads the list out to `limit`.
+        for position in self.base_order:
+            if len(related) >= limit:
+                break
+            if position in scores or candidates[position].get("id") == project_id:
+                continue
+            if has_language and candidates[position].get("language") == project_language:
+                continue  # already offered in tier B
+            related.append(position)
+
+        return [candidates[position] for position in related]
+
+
+# Fields the homepage (app.js) actually reads. Everything else in
+# processed_repos.json (topics, forks_count, created_at, license, language,
+# full_name, id, is_hidden_gem, is_emerging) is dead weight for the grid and is
+# deliberately dropped. Per-project pages still read the full dataset.
+INDEX_FIELDS = (
+    "name",
+    "description",
+    "stargazers_count",
+    "score",
+    "updated_at",
+    "categories",
+    "tags",
+    "commercial_alternatives",
+    "html_url",
+)
+
+
+def build_index_entry(record: dict) -> dict:
+    """Project a full record down to the slim homepage payload."""
+    entry = {
+        field: record.get(field)
+        for field in INDEX_FIELDS
+        if record.get(field) not in (None, [])
+    }
+    path = (record.get("project") or {}).get("path")
+    if path:
+        entry["path"] = path
+    return entry
+
+
 def rank_related_projects(
-    project: dict, candidates: list[dict], limit: int = 6
+    project: dict,
+    candidates: list[dict],
+    limit: int = 6,
+    index: "RelatedIndex | None" = None,
 ) -> list[dict]:
-    project_categories = set(project.get("categories") or [])
-    project_tags = set(project.get("tags") or [])
-    project_alternatives = set(project.get("commercial_alternatives") or [])
-    project_language = project.get("language")
+    """Return the `limit` most related candidates, excluding `project` itself.
 
-    def relevance(candidate: dict) -> int:
-        shared_categories = len(project_categories & set(candidate.get("categories") or []))
-        shared_tags = len(project_tags & set(candidate.get("tags") or []))
-        shared_alternatives = len(
-            project_alternatives & set(candidate.get("commercial_alternatives") or [])
-        )
-        same_language = bool(project_language) and candidate.get("language") == project_language
-        return (
-            3 * shared_categories
-            + 2 * shared_tags
-            + 2 * shared_alternatives
-            + int(same_language)
-        )
-
-    related = [
-        candidate for candidate in candidates if candidate.get("id") != project.get("id")
-    ]
-    related.sort(
-        key=lambda candidate: (
-            relevance(candidate),
-            candidate.get("score", 0),
-            candidate.get("stargazers_count", 0),
-        ),
-        reverse=True,
-    )
-    return related[:limit]
+    Pass a shared `index` when ranking many projects against the same candidate
+    list; without one an index is built per call (fine for one-off ranking).
+    """
+    if index is None:
+        index = RelatedIndex(candidates)
+    return index.rank(project, limit)
 
 
 def build_site(repos: list[dict], root_dir: Path, site_url: str | None = None) -> dict:
@@ -147,9 +270,10 @@ def build_site(repos: list[dict], root_dir: Path, site_url: str | None = None) -
     projects_dir.mkdir(parents=True, exist_ok=True)
 
     records = []
+    related_index = RelatedIndex(repos)
     for repo in repos:
         record = build_project_record(repo, generated_at)
-        related = rank_related_projects(repo, repos)
+        related = rank_related_projects(repo, repos, index=related_index)
         record["related_projects"] = [
             {
                 "id": candidate["id"],
@@ -170,6 +294,15 @@ def build_site(repos: list[dict], root_dir: Path, site_url: str | None = None) -
         (page_dir / "index.html").write_text(
             _render_project_page(record, public_url), encoding="utf-8"
         )
+
+    (root_dir / "data" / "index.json").write_text(
+        json.dumps(
+            [build_index_entry(record) for record in records],
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ),
+        encoding="utf-8",
+    )
 
     metadata = {"generated_at": generated_at, "total_projects": len(records)}
     (root_dir / "data" / "catalog-meta.json").write_text(

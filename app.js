@@ -28,7 +28,10 @@ function formatCount(n) {
 
 async function init() {
     try {
-        const response = await fetch('data/processed_repos.json');
+        // Slim, minified index emitted by the build (build_site) containing only
+        // the fields this page renders. The full dataset lives in
+        // data/processed_repos.json and is only needed by project pages.
+        const response = await fetch('data/index.json');
         if (!response.ok) throw new Error('Failed to fetch data');
         allRepos = await response.json();
         filteredRepos = [...allRepos];
@@ -126,7 +129,7 @@ function projectCard(repo, rank) {
         ? (repo.stargazers_count / 1000).toFixed(1) + 'k'
         : repo.stargazers_count;
 
-    const projectPath = repo.project ? repo.project.path : null;
+    const projectPath = repo.path || null;
     const titleTag = projectPath
         ? `<a href="${escapeHtml(projectPath)}" class="card-title">${escapeHtml(repo.name)}</a>`
         : `<a href="${escapeHtml(repo.html_url)}" target="_blank" rel="noreferrer" class="card-title">${escapeHtml(repo.name)}</a>`;

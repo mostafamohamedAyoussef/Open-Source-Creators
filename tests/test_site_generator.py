@@ -1,13 +1,45 @@
+import json
+import random
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from scripts.site_generator import (
+    INDEX_FIELDS,
+    RelatedIndex,
+    build_index_entry,
     build_site,
     build_project_record,
     make_project_slug,
     rank_related_projects,
 )
+
+
+def naive_rank_related_projects(project, candidates, limit=6):
+    """Reference implementation the optimized ranking must match exactly."""
+    project_categories = set(project.get("categories") or [])
+    project_tags = set(project.get("tags") or [])
+    project_alternatives = set(project.get("commercial_alternatives") or [])
+    project_language = project.get("language")
+
+    def relevance(candidate):
+        return (
+            3 * len(project_categories & set(candidate.get("categories") or []))
+            + 2 * len(project_tags & set(candidate.get("tags") or []))
+            + 2
+            * len(
+                project_alternatives
+                & set(candidate.get("commercial_alternatives") or [])
+            )
+            + int(bool(project_language) and candidate.get("language") == project_language)
+        )
+
+    related = [c for c in candidates if c.get("id") != project.get("id")]
+    related.sort(
+        key=lambda c: (relevance(c), c.get("score", 0), c.get("stargazers_count", 0)),
+        reverse=True,
+    )
+    return related[:limit]
 
 
 class SiteGeneratorTests(unittest.TestCase):
@@ -231,6 +263,189 @@ class SiteGeneratorTests(unittest.TestCase):
             [candidate["id"] for candidate in default_related], [2, 3, 4, 5, 6, 7]
         )
         self.assertEqual([candidate["id"] for candidate in limited_related], [2, 3])
+
+
+class HomepageIndexTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary_directory = TemporaryDirectory()
+        self.root = Path(self.temporary_directory.name)
+        self.repo = {
+            "id": 42,
+            "full_name": "Acme/Tool",
+            "name": "Tool",
+            "description": "Edits video",
+            "html_url": "https://github.com/acme/tool",
+            "stargazers_count": 1200,
+            "forks_count": 300,
+            "language": "Python",
+            "updated_at": "2026-07-01T00:00:00Z",
+            "created_at": "2026-01-01T00:00:00Z",
+            "license": "MIT License",
+            "topics": ["video", "editor"],
+            "categories": ["Video"],
+            "score": 9.5,
+            "commercial_alternatives": ["Premiere"],
+            "tags": ["video", "editor"],
+            "is_hidden_gem": False,
+            "is_emerging": True,
+        }
+
+    def tearDown(self):
+        self.temporary_directory.cleanup()
+
+    def _index(self):
+        build_site([self.repo], self.root)
+        return json.loads((self.root / "data" / "index.json").read_text())
+
+    def test_index_entry_keeps_every_field_the_homepage_renders(self):
+        entry = self._index()[0]
+        self.assertEqual(entry["name"], "Tool")
+        self.assertEqual(entry["description"], "Edits video")
+        self.assertEqual(entry["stargazers_count"], 1200)
+        self.assertEqual(entry["score"], 9.5)
+        self.assertEqual(entry["updated_at"], "2026-07-01T00:00:00Z")
+        self.assertEqual(entry["categories"], ["Video"])
+        self.assertEqual(entry["tags"], ["video", "editor"])
+        self.assertEqual(entry["commercial_alternatives"], ["Premiere"])
+        self.assertEqual(entry["html_url"], "https://github.com/acme/tool")
+        self.assertEqual(entry["path"], "project/acme-tool-42/")
+
+    def test_index_entry_drops_fields_the_homepage_never_reads(self):
+        entry = self._index()[0]
+        for dropped in (
+            "topics",
+            "forks_count",
+            "created_at",
+            "license",
+            "language",
+            "full_name",
+            "id",
+            "is_hidden_gem",
+            "is_emerging",
+            "project",
+            "related_projects",
+        ):
+            self.assertNotIn(dropped, entry)
+
+    def test_index_entry_allows_only_known_keys(self):
+        allowed = set(INDEX_FIELDS) | {"path"}
+        self.assertLessEqual(set(self._index()[0]), allowed)
+
+    def test_index_is_minified(self):
+        build_site([self.repo], self.root)
+        raw = (self.root / "data" / "index.json").read_text()
+        self.assertNotIn("\n", raw)
+        self.assertNotIn(", ", raw)
+        self.assertNotIn(": ", raw)
+
+    def test_index_has_one_entry_per_repo_in_source_order(self):
+        second = dict(self.repo, id=43, name="Other", full_name="Acme/Other")
+        build_site([self.repo, second], self.root)
+        entries = json.loads((self.root / "data" / "index.json").read_text())
+        self.assertEqual([e["name"] for e in entries], ["Tool", "Other"])
+
+    def test_index_omits_empty_and_missing_optional_fields(self):
+        entry = build_index_entry(
+            {"name": "Bare", "description": None, "categories": [], "tags": None}
+        )
+        self.assertEqual(entry, {"name": "Bare"})
+
+    def test_index_entry_survives_repos_with_missing_metadata(self):
+        build_site([{"id": 7, "name": "Minimal"}], self.root)
+        entries = json.loads((self.root / "data" / "index.json").read_text())
+        self.assertEqual(entries, [{"name": "Minimal", "path": "project/minimal-7/"}])
+
+    def test_index_is_smaller_than_the_full_dataset(self):
+        build_site([self.repo], self.root)
+        slim = (self.root / "data" / "index.json").stat().st_size
+        full = len(json.dumps([self.repo], indent=2))
+        self.assertLess(slim, full)
+
+
+class RankingEquivalenceTests(unittest.TestCase):
+    """The index-backed ranking must match the naive scan exactly."""
+
+    def _assert_matches_naive(self, repos, limit=6):
+        index = RelatedIndex(repos)
+        for project in repos:
+            expected = [id(c) for c in naive_rank_related_projects(project, repos, limit)]
+            actual = [id(c) for c in rank_related_projects(project, repos, limit, index)]
+            self.assertEqual(expected, actual, f"mismatch for project {project.get('id')}")
+
+    def test_matches_naive_on_generated_corpus(self):
+        random.seed(1234)
+        categories = ["Audio", "Video", "Image", "3D", "Writing"]
+        tags = [f"tag{i}" for i in range(12)]
+        alternatives = ["Premiere", "Canva", "Runway", "ElevenLabs"]
+        languages = ["Python", "JavaScript", "Rust", None]
+        repos = [
+            {
+                "id": i,
+                "name": f"repo{i}",
+                "categories": random.sample(categories, random.randint(0, 2)),
+                "tags": random.sample(tags, random.randint(0, 4)),
+                "commercial_alternatives": random.sample(
+                    alternatives, random.randint(0, 2)
+                ),
+                "language": random.choice(languages),
+                # Deliberately coarse so relevance/score/star ties are common.
+                "score": random.randint(0, 3),
+                "stargazers_count": random.choice([0, 1, 5]),
+            }
+            for i in range(220)
+        ]
+        for limit in (1, 6, 20):
+            self._assert_matches_naive(repos, limit)
+
+    def test_matches_naive_when_nothing_is_shared(self):
+        repos = [
+            {"id": 1, "language": "Python", "score": 1, "stargazers_count": 1},
+            {"id": 2, "language": "Python", "score": 1, "stargazers_count": 1},
+            {"id": 3, "language": "Rust", "score": 1, "stargazers_count": 1},
+            {"id": 4, "score": 1, "stargazers_count": 1},
+        ]
+        self._assert_matches_naive(repos)
+
+    def test_matches_naive_with_null_and_missing_metadata(self):
+        repos = [
+            {"id": 1, "categories": None, "tags": None, "commercial_alternatives": None},
+            {"id": 2},
+            {"id": 3, "categories": [], "tags": [], "language": None},
+            {"id": 4, "categories": ["Audio"], "language": "Python", "score": 5},
+        ]
+        self._assert_matches_naive(repos)
+
+    def test_language_only_candidates_outrank_unrelated_but_lose_to_shared_tags(self):
+        project = {"id": 1, "tags": ["tts"], "language": "Python"}
+        candidates = [
+            project,
+            {"id": 2, "language": "Python", "score": 10, "stargazers_count": 9999},
+            {"id": 3, "tags": ["tts"], "language": "Rust", "score": 0},
+            {"id": 4, "score": 10, "stargazers_count": 9999},
+        ]
+        related = rank_related_projects(project, candidates)
+        self.assertEqual([c["id"] for c in related], [3, 2, 4])
+
+    def test_zero_relevance_fallback_fills_the_list(self):
+        project = {"id": 1, "categories": ["Audio"]}
+        candidates = [project] + [
+            {"id": i, "score": i, "stargazers_count": 0} for i in range(2, 6)
+        ]
+        related = rank_related_projects(project, candidates)
+        self.assertEqual([c["id"] for c in related], [5, 4, 3, 2])
+
+    def test_index_backed_ranking_matches_unindexed_calls(self):
+        repos = [
+            {"id": 1, "categories": ["Audio"], "language": "Python", "score": 3},
+            {"id": 2, "categories": ["Audio"], "language": "Python", "score": 5},
+            {"id": 3, "tags": ["x"], "score": 1},
+        ]
+        index = RelatedIndex(repos)
+        for project in repos:
+            self.assertEqual(
+                [c["id"] for c in rank_related_projects(project, repos)],
+                [c["id"] for c in rank_related_projects(project, repos, 6, index)],
+            )
 
 
 if __name__ == "__main__":

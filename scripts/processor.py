@@ -1,7 +1,9 @@
 import json
 import os
 import math
+import re
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 
 # Commercial mapping dictionary
@@ -50,15 +52,51 @@ def calculate_score(repo):
         
     return round(min(score, 10.0), 1)
 
+# A "word" character for boundary purposes is an ASCII letter/digit only.
+# We deliberately avoid re's \b, whose \w includes non-ASCII letters: \b would
+# fail to match "ChatGPT" inside CJK prose such as "支持ChatGPT多轮对话" because
+# there is no boundary between two word characters. Lookarounds restricted to
+# ASCII alphanumerics treat CJK (and punctuation, whitespace, "-", "_", "/")
+# as boundaries, so "rag-based" and "ChatGPT多轮" match while "storage",
+# "dragging", "canvas" and "description" do not.
+_BOUNDARY_LEFT = r"(?<![a-z0-9])"
+_BOUNDARY_RIGHT = r"(?![a-z0-9])"
+
+
+@lru_cache(maxsize=None)
+def _keyword_regex(keyword):
+    """Compile a word-boundary matcher for one keyword.
+
+    Cached, so each distinct keyword is compiled exactly once for the whole
+    process rather than once per repository.
+
+    Keywords are matched literally (``re.escape``) so dotted keywords such as
+    "copy.ai" cannot have their "." act as a regex wildcard. Multi-word
+    keywords ("adobe audition") tolerate any run of whitespace between words;
+    hyphenated keywords ("text-to-image") are matched in their literal
+    hyphenated form.
+    """
+    body = r"\s+".join(re.escape(part) for part in keyword.lower().split(" ") if part)
+    return re.compile(_BOUNDARY_LEFT + body + _BOUNDARY_RIGHT)
+
+
 def map_commercial_alternative(repo):
+    """Map a repo to the commercial products it can replace.
+
+    Topics are exact tags, so they are compared by exact set membership.
+    Descriptions are free prose, so they are matched on word boundaries to
+    avoid claims like "Replaces Canva" for an "infinite canvas" library.
+    """
     topics = set(repo.get("topics", []))
     desc = str(repo.get("description", "")).lower()
-    
+
     alternatives = []
     for commercial, keywords in COMMERCIAL_MAPPING.items():
-        if any(kw in topics for kw in keywords) or any(kw in desc for kw in keywords):
+        if any(kw in topics for kw in keywords) or any(
+            _keyword_regex(kw).search(desc) for kw in keywords
+        ):
             alternatives.append(commercial)
-            
+
     return alternatives
 
 def process_repos(root_dir=None):
